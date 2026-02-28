@@ -1,0 +1,66 @@
+services:
+  nats:
+    image: nats:latest
+    command: ["-js", "-m", "8222"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./otel-collector/config.yaml:/etc/otelcol-contrib/config.yaml:ro
+    ports:
+      - "4318:4318"
+
+  js-init:
+    build:
+      context: ./js-init
+    depends_on:
+      - nats
+
+  flow-pipe:
+    build:
+      context: ./flow-pipe
+    depends_on:
+      - nats
+      - otel-collector
+      - js-init
+    environment:
+      - NATS_URL=nats://nats:4222
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+
+  grpc-gateway:
+    build:
+      context: .
+      dockerfile: grpc-gateway/Dockerfile
+    ports:
+      - "50051:50051"
+    depends_on:
+      - nats
+      - otel-collector
+      - js-init
+    environment:
+      - NATS_URL=nats://nats:4222
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+
+  grpc-client:
+    build:
+      context: .
+      dockerfile: grpc-client/Dockerfile
+    depends_on:
+      - grpc-gateway
+      - otel-collector
+    environment:
+      - GRPC_SERVER=grpc-gateway:50051
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
