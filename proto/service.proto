@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package flow;
+
+service FlowService {
+  rpc Run(FlowRequest) returns (FlowResponse);
+}
+
+message FlowRequest {
+  bytes payload = 1;
+  int32 timeout_ms = 2;
+}
+
+message FlowResponse {
+  bytes result = 1;
+}
