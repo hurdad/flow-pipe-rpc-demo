@@ -1,0 +1,18 @@
+stages:
+  - type: jetstream_source
+    name: source
+    config:
+      stream: FLOW
+      subject: flow.jobs
+      durable: FLOW_PIPE
+
+  - type: transform_stage
+    name: transform
+    config:
+      sleep_ms: 1000
+
+  - type: jetstream_sink
+    name: sink
+    config:
+      reply: true
+      ack: true
