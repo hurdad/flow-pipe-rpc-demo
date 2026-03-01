@@ -10,9 +10,9 @@ stages:
     threads: 1
     output_queue: q_in
     config:
-      stream: FLOW
+      stream_name: FLOW
       subject: flow.jobs
-      durable: FLOW_PIPE
+      durable_name: FLOW_PIPE
 
   - type: rpc_transform_stage
     name: transform
@@ -27,5 +27,4 @@ stages:
     threads: 1
     input_queue: q_out
     config:
-      reply: true
-      ack: true
+      subject: flow.replies
