@@ -1,0 +1,31 @@
+queues:
+  - name: q_in
+    capacity: 256
+  - name: q_out
+    capacity: 256
+
+stages:
+  - type: nats_jetstream_source
+    name: source
+    threads: 1
+    output_queue: q_in
+    config:
+      stream: FLOW
+      subject: flow.jobs
+      durable: FLOW_PIPE
+
+  - type: rpc_transform_stage
+    name: transform
+    threads: 2
+    input_queue: q_in
+    output_queue: q_out
+    config:
+      processing_delay_ms: 1000
+
+  - type: nats_jetstream_sink
+    name: sink
+    threads: 1
+    input_queue: q_out
+    config:
+      reply: true
+      ack: true
