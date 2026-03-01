@@ -7,13 +7,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /src
+COPY CMakeLists.txt /src/CMakeLists.txt
 COPY proto /src/proto
 COPY grpc-gateway /src/grpc-gateway
-WORKDIR /src/grpc-gateway
-RUN cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j
+RUN cmake -S /src -B /src/build \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DBUILD_FLOW_PIPE=OFF \
+    -DBUILD_GRPC_CLIENT=OFF \
+    -DBUILD_GRPC_GATEWAY=ON && \
+    cmake --build /src/build -j --target grpc-gateway
 
 FROM build AS runtime
 WORKDIR /app
-COPY --from=build /src/grpc-gateway/build/grpc-gateway /app/grpc-gateway
+COPY --from=build /src/build/grpc-gateway/grpc-gateway /app/grpc-gateway
 EXPOSE 50051
 ENTRYPOINT ["/app/grpc-gateway"]
