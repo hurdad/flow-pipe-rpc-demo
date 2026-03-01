@@ -1,3 +1,6 @@
+#include <thread>
+#include <chrono>
+
 #include "flowpipe/stage.h"
 #include "flowpipe/configurable_stage.h"
 #include "flowpipe/observability/logging.h"
@@ -65,7 +68,8 @@ public:
 
     const size_t size = input.size;
 
-
+    // Simulate work
+    std::this_thread::sleep_for(std::chrono::milliseconds(config_.processing_delay_ms()));
 
     // ----------------------------------------------------------
     // Allocate new payload
