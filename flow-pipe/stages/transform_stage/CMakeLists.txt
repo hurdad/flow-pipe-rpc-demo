@@ -1,4 +1,7 @@
-cmake_minimum_required(VERSION 3.20)
+list(APPEND CMAKE_PREFIX_PATH "/opt/flow-pipe")
+
+find_package(flowpipe REQUIRED)
+find_package(Protobuf REQUIRED)
 
 add_library(stage_transform_stage SHARED
   transform_stage.cpp
