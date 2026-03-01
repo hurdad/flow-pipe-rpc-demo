@@ -10,9 +10,9 @@ RUN cmake -S /src -B /src/build \
 
 FROM ghcr.io/hurdad/flow-pipe-runtime:main-ubuntu24.04
 
-COPY --from=build \
+COPY --from=builder \
   /opt/flow-pipe/plugins/*.so \
   /opt/flow-pipe/plugins/
 
 COPY flow-pipe/flow/pipeline.yaml /opt/flow-pipe/flow/pipeline.yaml
-ENTRYPOINT ["/opt/flow-pipe/bin/flow-pipe-runtime", "--config", "/opt/flow-pipe/flows/pipeline.yaml"]
+ENTRYPOINT ["/opt/flow-pipe/bin/flow-pipe-runtime", "--config", "/opt/flow-pipe/flow/pipeline.yaml"]
