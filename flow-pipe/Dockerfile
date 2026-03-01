@@ -11,8 +11,9 @@ COPY flow-pipe /src/flow-pipe
 RUN cmake -S /src -B /src/build \
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_FLOW_PIPE=ON \
-    -DBUILD_GRPC_BUILD=OFF && \
-    cmake --build /src/build -j
+    -DBUILD_GRPC_BUILD=OFF \
+    && cmake --build /src/build -j \
+    && cmake --install build
 
 FROM ghcr.io/hurdad/flow-pipe-runtime:main-ubuntu24.04
 

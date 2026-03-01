@@ -10,9 +10,11 @@ stages:
     threads: 1
     output_queue: q_in
     config:
-      stream_name: FLOW
+      url: nats://127.0.0.1:4222
       subject: flow.jobs
+      stream_name: FLOW
       durable_name: FLOW_PIPE
+      poll_timeout_ms: 1000
 
   - type: rpc_transform_stage
     name: transform
@@ -27,4 +29,5 @@ stages:
     threads: 1
     input_queue: q_out
     config:
+      url: nats://127.0.0.1:4222
       subject: flow.replies

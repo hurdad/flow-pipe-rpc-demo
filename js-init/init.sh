@@ -1,12 +1,15 @@
 #!/usr/bin/env sh
 set -eu
 
-NATS_URL="${NATS_URL:-nats://nats:4222}"
+NATS_URL="${NATS_URL:-nats://localhost:4222}"
 
 echo "Waiting for NATS at ${NATS_URL}..."
-until nats --server "${NATS_URL}" server check >/dev/null 2>&1; do
+
+until nats --server "${NATS_URL}" server check connection >/dev/null 2>&1; do
   sleep 1
 done
+
+echo "NATS is up."
 
 echo "Ensuring stream FLOW exists..."
 if ! nats --server "${NATS_URL}" stream info FLOW >/dev/null 2>&1; then
