@@ -1,6 +1,3 @@
-[submodule "third_party/flow-pipe-stage-plugins"]
-	path = third_party/flow-pipe-stage-plugins
-	url = https://github.com/hurdad/flow-pipe-stage-plugins.git
-[submodule "third_party/flow-pipe"]
-	path = third_party/flow-pipe
-	url = https://github.com/hurdad/flow-pipe.git
+[submodule "third_party/opentelemetry-cpp"]
+	path = third_party/opentelemetry-cpp
+	url = https://github.com/open-telemetry/opentelemetry-cpp.git
