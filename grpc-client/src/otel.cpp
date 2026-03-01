@@ -2,9 +2,8 @@
 
 #include <cstdlib>
 
-#include <opentelemetry/exporters/otlp/otlp_grpc_exporter.h>
+#include <opentelemetry/exporters/otlp/otlp_grpc_exporter_factory.h>
 #include <opentelemetry/sdk/resource/resource.h>
-#include <opentelemetry/sdk/resource/semantic_conventions.h>
 #include <opentelemetry/sdk/trace/batch_span_processor.h>
 #include <opentelemetry/sdk/trace/tracer_provider.h>
 
@@ -20,10 +19,11 @@ void InitTracer(const std::string &service_name) {
     opts.endpoint = endpoint;
   }
 
-  auto exporter = std::make_unique<opentelemetry::exporter::otlp::OtlpGrpcExporter>(opts);
-  auto processor = std::make_unique<trace_sdk::BatchSpanProcessor>(std::move(exporter));
+  auto exporter = opentelemetry::exporter::otlp::OtlpGrpcExporterFactory::Create(opts);
+  auto processor = std::make_unique<trace_sdk::BatchSpanProcessor>(std::move(exporter),
+                                                                    trace_sdk::BatchSpanProcessorOptions{});
 
-  auto attrs = resource::ResourceAttributes{{resource::SemanticConventions::kServiceName, service_name}};
+  auto attrs = resource::ResourceAttributes{{"service.name", service_name}};
   auto provider = opentelemetry::nostd::shared_ptr<trace::TracerProvider>(
       new trace_sdk::TracerProvider(std::move(processor), resource::Resource::Create(attrs)));
   trace::Provider::SetTracerProvider(provider);

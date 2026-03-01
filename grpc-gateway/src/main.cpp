@@ -40,7 +40,7 @@ public:
     auto scope = tracer->WithActiveSpan(span);
 
     natsStatus s;
-    char *inbox = nullptr;
+    natsInbox *inbox = nullptr;
     s = natsInbox_Create(&inbox);
     if (s != NATS_OK) {
       span->SetStatus(opentelemetry::trace::StatusCode::kError, "inbox create failed");
@@ -50,7 +50,7 @@ public:
     natsSubscription *sub = nullptr;
     s = natsConnection_SubscribeSync(&sub, nc_, inbox);
     if (s != NATS_OK) {
-      nats_Free(inbox);
+      natsInbox_Destroy(inbox);
       span->SetStatus(opentelemetry::trace::StatusCode::kError, "subscribe failed");
       return grpc::Status(grpc::StatusCode::INTERNAL, "subscribe failed");
     }
@@ -80,7 +80,7 @@ public:
     if (s != NATS_OK || ack == nullptr) {
       natsMsg_Destroy(msg);
       natsSubscription_Destroy(sub);
-      nats_Free(inbox);
+      natsInbox_Destroy(inbox);
       span->SetStatus(opentelemetry::trace::StatusCode::kError, "publish failed");
       return grpc::Status(grpc::StatusCode::INTERNAL, "publish failed");
     }
@@ -94,7 +94,7 @@ public:
     jsPubAck_Destroy(ack);
     natsMsg_Destroy(msg);
     natsSubscription_Destroy(sub);
-    nats_Free(inbox);
+    natsInbox_Destroy(inbox);
 
     if (s != NATS_OK || reply == nullptr) {
       span->SetStatus(opentelemetry::trace::StatusCode::kError, "timeout waiting reply");
