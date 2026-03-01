@@ -1,15 +1,16 @@
 FROM ubuntu:24.04 AS build
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential cmake pkg-config ca-certificates \
+    build-essential cmake pkg-config ca-certificates git \
     libgrpc++-dev libprotobuf-dev protobuf-compiler protobuf-compiler-grpc \
-    libnats-dev libopentelemetry-cpp-dev && \
+    libnats-dev && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /src
 COPY CMakeLists.txt /src/CMakeLists.txt
 COPY proto /src/proto
 COPY grpc /src/grpc
+COPY third_party /src/third_party
 
 RUN cmake -S /src -B /src/build \
     -DCMAKE_BUILD_TYPE=Release \
