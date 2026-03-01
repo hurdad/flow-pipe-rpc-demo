@@ -2,15 +2,15 @@ syntax = "proto3";
 
 package flowpipe.rpc.v1;
 
-service FlowPipeService {
-  rpc Run(RunRequest) returns (RunResponse);
+service RPCService {
+  rpc Run(RPCRequest) returns (RPCResponse);
 }
 
-message RunRequest {
+message RPCRequest {
   string payload = 1;
 }
 
-message RunResponse {
+message RPCResponse {
   string payload = 1;
   string status = 2;
   string processed_by = 3;

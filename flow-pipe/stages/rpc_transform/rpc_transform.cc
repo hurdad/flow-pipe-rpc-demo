@@ -72,7 +72,7 @@ public:
     std::this_thread::sleep_for(std::chrono::milliseconds(config_.processing_delay_ms()));
 
     // ----------------------------------------------------------
-    // Allocate new payload
+    // Allocate new payload for output
     // ----------------------------------------------------------
     auto buffer = AllocatePayloadBuffer(size);
     if (!buffer) {
@@ -80,12 +80,18 @@ public:
       return;
     }
 
+    // get access to input data
     const uint8_t* src = input.data();
     uint8_t* dst = static_cast<uint8_t*>(buffer.get());
 
+    // convert input string uppercase
+    for (size_t i = 0; i < size; ++i) {
+      dst[i] = static_cast<uint8_t>(
+          std::toupper(static_cast<unsigned char>(src[i])));
+    }
 
     // build output
-    //output = Payload(std::move(buffer), size);
+    output = Payload(std::move(buffer), size);
   }
 
 private:

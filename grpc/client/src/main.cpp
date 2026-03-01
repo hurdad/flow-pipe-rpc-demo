@@ -29,7 +29,7 @@ int main() {
 
   std::string target = std::getenv("GRPC_SERVER") ? std::getenv("GRPC_SERVER") : "localhost:50051";
   auto channel = grpc::CreateChannel(target, grpc::InsecureChannelCredentials());
-  auto stub = flowpipe::rpc::v1::FlowPipeService::NewStub(channel);
+  auto stub = flowpipe::rpc::v1::RPCService::NewStub(channel);
 
   auto tracer = otel::GetTracer();
   auto span = tracer->StartSpan("client.CallRun");
@@ -40,10 +40,10 @@ int main() {
   GrpcMetadataCarrier carrier(ctx);
   propagator->Inject(carrier, opentelemetry::context::RuntimeContext::GetCurrent());
 
-  flowpipe::rpc::v1::RunRequest req;
+  flowpipe::rpc::v1::RPCRequest req;
   req.set_payload("hello through flow-pipe");
 
-  flowpipe::rpc::v1::RunResponse resp;
+  flowpipe::rpc::v1::RPCResponse resp;
   auto status = stub->Run(&ctx, req, &resp);
 
   if (!status.ok()) {

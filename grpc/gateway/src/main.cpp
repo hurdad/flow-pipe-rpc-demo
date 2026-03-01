@@ -13,11 +13,11 @@
 #include <memory>
 #include <string>
 
-using flowpipe::rpc::v1::FlowPipeService;
-using flowpipe::rpc::v1::RunRequest;
-using flowpipe::rpc::v1::RunResponse;
+using flowpipe::rpc::v1::RPCService;
+using flowpipe::rpc::v1::RPCRequest;
+using flowpipe::rpc::v1::RPCResponse;
 
-class GatewayService final : public FlowPipeService::Service {
+class GatewayService final : public RPCService::Service {
 public:
   GatewayService() {
     const char *url = std::getenv("NATS_URL");
@@ -33,8 +33,8 @@ public:
     natsOptions_Destroy(opts_);
   }
 
-  grpc::Status Run(grpc::ServerContext *context, const RunRequest *request,
-                   RunResponse *response) override {
+  grpc::Status Run(grpc::ServerContext *context, const RPCRequest *request,
+                   RPCResponse *response) override {
     auto tracer = otel::GetTracer();
     auto span = tracer->StartSpan("grpc.gateway.Run");
     auto scope = tracer->WithActiveSpan(span);
