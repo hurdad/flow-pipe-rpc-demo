@@ -30,9 +30,12 @@ services:
       dockerfile: flow-pipe/Dockerfile
     network_mode: host
     depends_on:
-      - nats
-      - jaeger
-      - js-init
+      nats:
+        condition: service_started
+      jaeger:
+        condition: service_started
+      js-init:
+        condition: service_completed_successfully
     command:
       - /opt/flow-pipe/flows/rpc-pipeline.yaml
     environment:
@@ -47,9 +50,12 @@ services:
       target: gateway-runtime
     network_mode: host
     depends_on:
-      - nats
-      - jaeger
-      - js-init
+      nats:
+        condition: service_started
+      jaeger:
+        condition: service_started
+      js-init:
+        condition: service_completed_successfully
     environment:
       - NATS_URL=nats://127.0.0.1:4222
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4317
