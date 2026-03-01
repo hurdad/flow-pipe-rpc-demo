@@ -1,4 +1,10 @@
 FROM ghcr.io/hurdad/flow-pipe-dev:main-ubuntu24.04 AS builder
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+    libnats-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /src
 COPY CMakeLists.txt /src/CMakeLists.txt
 COPY flow-pipe /src/flow-pipe
@@ -10,9 +16,14 @@ RUN cmake -S /src -B /src/build \
 
 FROM ghcr.io/hurdad/flow-pipe-runtime:main-ubuntu24.04
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+    libnats3.7t64 \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --from=builder \
   /opt/flow-pipe/plugins/*.so \
   /opt/flow-pipe/plugins/
 
-COPY flow-pipe/flow/pipeline.yaml /opt/flow-pipe/flow/pipeline.yaml
+COPY flow-pipe/flows/*.yaml /opt/flow-pipe/flows/
 ENTRYPOINT ["/opt/flow-pipe/bin/flow-pipe-runtime", "--config", "/opt/flow-pipe/flow/pipeline.yaml"]

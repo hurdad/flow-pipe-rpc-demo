@@ -26,7 +26,8 @@ services:
 
   flow-pipe:
     build:
-      context: ./flow-pipe
+      context: .
+      dockerfile: flow-pipe/Dockerfile
     network_mode: host
     depends_on:
       - nats
