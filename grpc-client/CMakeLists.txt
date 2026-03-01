@@ -6,7 +6,19 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Protobuf REQUIRED)
 find_package(gRPC REQUIRED)
-find_package(OpenTelemetry CONFIG REQUIRED)
+
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "Dont build Shared Libs" FORCE)
+set(BUILD_TESTING OFF CACHE BOOL "Disable tests for dependencies" FORCE)
+set(WITH_OTLP_GRPC ON CACHE BOOL "Build OTLP gRPC exporter" FORCE)
+set(WITH_OTLP_HTTP ON CACHE BOOL "Build OTLP HTTP exporter" FORCE)
+set(WITH_BENCHMARK OFF CACHE BOOL "Disable Benchmarks build" FORCE)
+set(WITH_EXAMPLES OFF CACHE BOOL "Disable Examples build" FORCE)
+set(WITH_FUNC_TESTS OFF CACHE BOOL "Disable Func tests" FORCE)
+
+if(NOT TARGET opentelemetry_trace)
+  add_subdirectory(${CMAKE_SOURCE_DIR}/third_party/opentelemetry-cpp
+                   ${CMAKE_BINARY_DIR}/third_party/opentelemetry-cpp)
+endif()
 
 set(PROTO_FILE ${CMAKE_CURRENT_SOURCE_DIR}/../proto/service.proto)
 get_filename_component(PROTO_PATH ${PROTO_FILE} PATH)
