@@ -19,7 +19,7 @@ endif()
 
 if(BUILD_GRPC_BUILD)
   add_subdirectory(third_party/opentelemetry-cpp)
-  add_subdirectory(grpc-client)
-  add_subdirectory(grpc-gateway)
+  add_subdirectory(grpc/client)
+  add_subdirectory(grpc/gateway)
 endif()
 
