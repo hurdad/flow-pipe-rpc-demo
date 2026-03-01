@@ -2,18 +2,18 @@ services:
   nats:
     image: nats:latest
     network_mode: host
-    command: ["-js", "-m", "8222"]
+    command:
+      - "--jetstream"
+      - "--store_dir=/data"
+      - "--http_port=8222"
+      - "--port=4222"
+
+    volumes:
+      - nats_data:/data
 
   jaeger:
     image: jaegertracing/all-in-one:latest
     network_mode: host
-
-  otel-collector:
-    image: otel/opentelemetry-collector-contrib:latest
-    network_mode: host
-    command: ["--config=/etc/otelcol-contrib/config.yaml"]
-    volumes:
-      - ./otel-collector/config.yaml:/etc/otelcol-contrib/config.yaml:ro
 
   js-init:
     build:
@@ -31,8 +31,9 @@ services:
     network_mode: host
     depends_on:
       - nats
-      - otel-collector
+      - jaeger
       - js-init
+
     environment:
       - NATS_URL=nats://127.0.0.1:4222
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4317
@@ -46,7 +47,7 @@ services:
     network_mode: host
     depends_on:
       - nats
-      - otel-collector
+      - jaeger
       - js-init
     environment:
       - NATS_URL=nats://127.0.0.1:4222
@@ -61,8 +62,12 @@ services:
     network_mode: host
     depends_on:
       - grpc-gateway
-      - otel-collector
+      - jaeger
     environment:
       - GRPC_SERVER=127.0.0.1:50051
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4317
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+
+volumes:
+  nats_data:
+    driver: local

@@ -26,4 +26,4 @@ COPY --from=builder \
   /opt/flow-pipe/plugins/
 
 COPY flow-pipe/flows/*.yaml /opt/flow-pipe/flows/
-ENTRYPOINT ["/opt/flow-pipe/bin/flow-pipe-runtime", "--config", "/opt/flow-pipe/flow/pipeline.yaml"]
+

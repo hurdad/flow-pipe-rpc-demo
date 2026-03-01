@@ -19,11 +19,24 @@ RUN cmake -S /src -B /src/build \
     cmake --build /src/build -j --target grpc-client grpc-gateway
 
 FROM ubuntu:24.04 AS client-runtime
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgrpc++1.51t64 \
+    libprotobuf32 && \
+    rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 COPY --from=build /src/build/grpc/client/grpc-client /app/grpc-client
 ENTRYPOINT ["/app/grpc-client"]
 
 FROM ubuntu:24.04 AS gateway-runtime
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgrpc++1.51t64 \
+    libprotobuf32 \
+    libnats3.7t64 && \
+    rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 COPY --from=build /src/build/grpc/gateway/grpc-gateway /app/grpc-gateway
 EXPOSE 50051
