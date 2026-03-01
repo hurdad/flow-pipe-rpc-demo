@@ -9,16 +9,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /src
 COPY CMakeLists.txt /src/CMakeLists.txt
 COPY proto /src/proto
-COPY grpc-gateway /src/grpc-gateway
+COPY grpc /src/grpc
+
 RUN cmake -S /src -B /src/build \
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_FLOW_PIPE=OFF \
-    -DBUILD_GRPC_CLIENT=OFF \
-    -DBUILD_GRPC_GATEWAY=ON && \
-    cmake --build /src/build -j --target grpc-gateway
+    -DBUILD_GRPC_BUILD=ON && \
+    cmake --build /src/build -j --target grpc-client grpc-gateway
 
-FROM build AS runtime
+FROM ubuntu:24.04 AS client-runtime
 WORKDIR /app
-COPY --from=build /src/build/grpc-gateway/grpc-gateway /app/grpc-gateway
+COPY --from=build /src/build/grpc/client/grpc-client /app/grpc-client
+ENTRYPOINT ["/app/grpc-client"]
+
+FROM ubuntu:24.04 AS gateway-runtime
+WORKDIR /app
+COPY --from=build /src/build/grpc/gateway/grpc-gateway /app/grpc-gateway
 EXPOSE 50051
 ENTRYPOINT ["/app/grpc-gateway"]

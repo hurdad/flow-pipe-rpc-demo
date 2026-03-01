@@ -9,7 +9,7 @@ find_package(gRPC REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(NATS REQUIRED IMPORTED_TARGET libnats)
 
-set(PROTO_FILE ${CMAKE_CURRENT_SOURCE_DIR}/../proto/service.proto)
+set(PROTO_FILE ${CMAKE_CURRENT_SOURCE_DIR}/../../proto/service.proto)
 get_filename_component(PROTO_PATH ${PROTO_FILE} PATH)
 
 set(PROTO_SRCS ${CMAKE_CURRENT_BINARY_DIR}/service.pb.cc)

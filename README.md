@@ -66,8 +66,8 @@ client.CallRun
 ## Repo layout
 
 - `proto/service.proto`: RPC contract
-- `grpc-gateway/`: sync gRPC server + JetStream bridge
-- `grpc-client/`: simple caller with trace context injection
+- `grpc/gateway/`: sync gRPC server + JetStream bridge
+- `grpc/client/`: simple caller with trace context injection
 - `flow-pipe/`: custom transform stage + runtime image overlay
 - `otel-collector/`: OTLP collector config
 - `js-init/`: one-shot JetStream stream/consumer bootstrap

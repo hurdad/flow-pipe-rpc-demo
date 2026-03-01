@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(Protobuf REQUIRED)
 find_package(gRPC REQUIRED)
 
-set(PROTO_FILE ${CMAKE_CURRENT_SOURCE_DIR}/../proto/service.proto)
+set(PROTO_FILE ${CMAKE_CURRENT_SOURCE_DIR}/../../proto/service.proto)
 get_filename_component(PROTO_PATH ${PROTO_FILE} PATH)
 
 set(PROTO_SRCS ${CMAKE_CURRENT_BINARY_DIR}/service.pb.cc)
