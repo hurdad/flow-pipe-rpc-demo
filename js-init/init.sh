@@ -24,6 +24,19 @@ if ! nats --server "${NATS_URL}" stream info FLOW >/dev/null 2>&1; then
     --defaults
 fi
 
+echo "Ensuring stream FLOW_REPLIES exists..."
+if ! nats --server "${NATS_URL}" stream info FLOW_REPLIES >/dev/null 2>&1; then
+  nats --server "${NATS_URL}" stream add FLOW_REPLIES \
+    --subjects flow.replies \
+    --retention limits \
+    --storage memory \
+    --max-msgs=-1 \
+    --max-bytes=-1 \
+    --max-age=1h \
+    --dupe-window=2m \
+    --defaults
+fi
+
 echo "Ensuring durable consumer FLOW_PIPE exists..."
 if ! nats --server "${NATS_URL}" consumer info FLOW FLOW_PIPE >/dev/null 2>&1; then
   nats --server "${NATS_URL}" consumer add FLOW FLOW_PIPE \

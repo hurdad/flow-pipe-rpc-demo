@@ -76,7 +76,7 @@ public:
     // ----------------------------------------------------------
     auto buffer = AllocatePayloadBuffer(size);
     if (!buffer) {
-      FP_LOG_ERROR("uppercase_transform failed to allocate payload");
+      FP_LOG_ERROR("rpc_transform failed to allocate payload");
       return;
     }
 

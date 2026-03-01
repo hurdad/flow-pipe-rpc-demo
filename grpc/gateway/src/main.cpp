@@ -21,87 +21,131 @@ class GatewayService final : public RPCService::Service {
 public:
   GatewayService() {
     const char *url = std::getenv("NATS_URL");
-    natsOptions_Create(&opts_);
-    natsOptions_SetURL(opts_, url == nullptr ? "nats://nats:4222" : url);
-    natsConnection_Connect(&nc_, opts_);
-    natsConnection_JetStream(&js_, nc_, nullptr);
+
+    natsStatus s = natsOptions_Create(&opts_);
+    if (s != NATS_OK) {
+      std::cerr << "GatewayService: natsOptions_Create failed: "
+                << natsStatus_GetText(s) << "\n";
+      return;
+    }
+
+    s = natsOptions_SetURL(opts_, url == nullptr ? "nats://nats:4222" : url);
+    if (s != NATS_OK) {
+      std::cerr << "GatewayService: natsOptions_SetURL failed: "
+                << natsStatus_GetText(s) << "\n";
+      return;
+    }
+
+    s = natsConnection_Connect(&nc_, opts_);
+    if (s != NATS_OK) {
+      std::cerr << "GatewayService: natsConnection_Connect failed: "
+                << natsStatus_GetText(s) << "\n";
+      return;
+    }
+
+    s = natsConnection_JetStream(&js_, nc_, nullptr);
+    if (s != NATS_OK) {
+      std::cerr << "GatewayService: natsConnection_JetStream failed: "
+                << natsStatus_GetText(s) << "\n";
+    }
   }
 
   ~GatewayService() override {
-    jsCtx_Destroy(js_);
-    natsConnection_Destroy(nc_);
-    natsOptions_Destroy(opts_);
+    if (js_) jsCtx_Destroy(js_);
+    if (nc_) natsConnection_Destroy(nc_);
+    if (opts_) natsOptions_Destroy(opts_);
   }
 
   grpc::Status Run(grpc::ServerContext *context, const RPCRequest *request,
                    RPCResponse *response) override {
+    if (!nc_ || !js_) {
+      return grpc::Status(grpc::StatusCode::UNAVAILABLE,
+                          "NATS connection not initialized");
+    }
+
     auto tracer = otel::GetTracer();
     auto span = tracer->StartSpan("grpc.gateway.Run");
     auto scope = tracer->WithActiveSpan(span);
 
-    natsStatus s;
-    natsInbox *inbox = nullptr;
-    s = natsInbox_Create(&inbox);
-    if (s != NATS_OK) {
-      span->SetStatus(opentelemetry::trace::StatusCode::kError, "inbox create failed");
-      return grpc::Status(grpc::StatusCode::INTERNAL, "inbox create failed");
-    }
-
+    // Subscribe to the reply subject BEFORE publishing to avoid a race
+    // condition where the reply arrives before we start listening.
     natsSubscription *sub = nullptr;
-    s = natsConnection_SubscribeSync(&sub, nc_, inbox);
+    natsStatus s = natsConnection_SubscribeSync(&sub, nc_, "flow.replies");
     if (s != NATS_OK) {
-      natsInbox_Destroy(inbox);
-      span->SetStatus(opentelemetry::trace::StatusCode::kError, "subscribe failed");
+      span->SetStatus(opentelemetry::trace::StatusCode::kError,
+                      "subscribe failed");
+      span->End();
       return grpc::Status(grpc::StatusCode::INTERNAL, "subscribe failed");
     }
 
     auto pub_span = tracer->StartSpan("jetstream.publish");
 
     natsMsg *msg = nullptr;
-    natsMsg_Create(&msg, "flow.jobs", inbox, request->payload().data(), request->payload().size());
+    natsMsg_Create(&msg, "flow.jobs", nullptr,
+                   request->payload().data(), request->payload().size());
 
-    auto propagator = opentelemetry::context::propagation::GlobalTextMapPropagator::GetGlobalPropagator();
+    auto propagator =
+        opentelemetry::context::propagation::GlobalTextMapPropagator::
+            GetGlobalPropagator();
     class NatsCarrier : public opentelemetry::context::propagation::TextMapCarrier {
     public:
       explicit NatsCarrier(natsMsg *msg) : msg_(msg) {}
-      opentelemetry::nostd::string_view Get(opentelemetry::nostd::string_view key) const noexcept override { return ""; }
-      void Set(opentelemetry::nostd::string_view key, opentelemetry::nostd::string_view value) noexcept override {
-        natsMsgHeader_Set(msg_, std::string(key).c_str(), std::string(value).c_str());
+      opentelemetry::nostd::string_view Get(
+          opentelemetry::nostd::string_view) const noexcept override {
+        return "";
+      }
+      void Set(opentelemetry::nostd::string_view key,
+               opentelemetry::nostd::string_view value) noexcept override {
+        natsMsgHeader_Set(msg_, std::string(key).c_str(),
+                          std::string(value).c_str());
       }
     private:
       natsMsg *msg_;
     } carrier(msg);
-    propagator->Inject(carrier, opentelemetry::context::RuntimeContext::GetCurrent());
+    propagator->Inject(carrier,
+                       opentelemetry::context::RuntimeContext::GetCurrent());
 
     jsPubAck *ack = nullptr;
     s = js_PublishMsg(&ack, js_, msg, nullptr, nullptr);
     pub_span->End();
 
+    natsMsg_Destroy(msg);
+
     if (s != NATS_OK || ack == nullptr) {
-      natsMsg_Destroy(msg);
       natsSubscription_Destroy(sub);
-      natsInbox_Destroy(inbox);
-      span->SetStatus(opentelemetry::trace::StatusCode::kError, "publish failed");
+      span->SetStatus(opentelemetry::trace::StatusCode::kError,
+                      "publish failed");
+      span->End();
       return grpc::Status(grpc::StatusCode::INTERNAL, "publish failed");
     }
 
     span->SetAttribute("js.stream", ack->Stream);
     span->SetAttribute("js.seq", static_cast<int64_t>(ack->Sequence));
+    jsPubAck_Destroy(ack);
 
     natsMsg *reply = nullptr;
     s = natsSubscription_NextMsg(&reply, sub, 5000);
-
-    jsPubAck_Destroy(ack);
-    natsMsg_Destroy(msg);
     natsSubscription_Destroy(sub);
-    natsInbox_Destroy(inbox);
 
     if (s != NATS_OK || reply == nullptr) {
-      span->SetStatus(opentelemetry::trace::StatusCode::kError, "timeout waiting reply");
-      return grpc::Status(grpc::StatusCode::DEADLINE_EXCEEDED, "timeout waiting flow-pipe reply");
+      span->SetStatus(opentelemetry::trace::StatusCode::kError,
+                      "timeout waiting reply");
+      span->End();
+      return grpc::Status(grpc::StatusCode::DEADLINE_EXCEEDED,
+                          "timeout waiting flow-pipe reply");
     }
 
-    response->set_payload(std::string(natsMsg_GetData(reply), natsMsg_GetDataLength(reply)));
+    int data_len = natsMsg_GetDataLength(reply);
+    if (data_len < 0) {
+      natsMsg_Destroy(reply);
+      span->SetStatus(opentelemetry::trace::StatusCode::kError,
+                      "invalid reply length");
+      span->End();
+      return grpc::Status(grpc::StatusCode::INTERNAL, "invalid reply length");
+    }
+
+    response->set_payload(
+        std::string(natsMsg_GetData(reply), static_cast<size_t>(data_len)));
     response->set_status("OK");
     response->set_processed_by("transform_stage");
 
