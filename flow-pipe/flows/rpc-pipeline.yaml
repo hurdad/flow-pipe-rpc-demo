@@ -15,7 +15,7 @@ stages:
       durable_name: FLOW_PIPE
       poll_timeout_ms: 1000
 
-  - type: rpc_transform_stage
+  - type: rpc_transform
     name: transform
     threads: 2
     input_queue: q_in
