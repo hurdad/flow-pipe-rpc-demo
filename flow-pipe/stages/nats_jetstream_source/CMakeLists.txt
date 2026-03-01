@@ -31,6 +31,10 @@ add_library(stage_nats_jetstream_source_proto STATIC
         ${PROTO_HDRS}
 )
 
+set_target_properties(stage_nats_jetstream_source_proto PROPERTIES
+        POSITION_INDEPENDENT_CODE ON
+)
+
 target_link_libraries(stage_nats_jetstream_source_proto
         PUBLIC protobuf::libprotobuf
 )
