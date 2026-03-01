@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20)
 project(flow_pipe_rpc_demo LANGUAGES CXX)
 
 option(BUILD_FLOW_PIPE "Build flow-pipe plugin" ON)
-option(BUILD_GRPC_BUILD "Build grpc-client and grpc-gateway" ON)
+option(BUILD_GRPC "Build grpc-client and grpc-gateway" ON)
 
 # otel-cpp opts
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Dont build Shared Libs" FORCE)
@@ -17,7 +17,7 @@ if(BUILD_FLOW_PIPE)
   add_subdirectory(flow-pipe)
 endif()
 
-if(BUILD_GRPC_BUILD)
+if(BUILD_GRPC)
   add_subdirectory(third_party/opentelemetry-cpp)
   add_subdirectory(grpc/client)
   add_subdirectory(grpc/gateway)

@@ -1,6 +1,7 @@
 #include <google/protobuf/struct.pb.h>
 #include <nats/nats.h>
 
+#include <cstdlib>
 #include <string>
 
 #include "flowpipe/configurable_stage.h"
@@ -57,7 +58,10 @@ class NatsJetStreamSink final : public ISinkStage, public ConfigurableStage {
       return false;
     }
 
-    std::string url = cfg.url().empty() ? kDefaultNatsUrl : cfg.url();
+    const char* env_url = std::getenv("NATS_URL");
+    std::string url = cfg.url().empty()
+                          ? (env_url ? env_url : kDefaultNatsUrl)
+                          : cfg.url();
     if (!InitializeConnection(url)) {
       return false;
     }

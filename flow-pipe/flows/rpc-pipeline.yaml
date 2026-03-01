@@ -10,7 +10,6 @@ stages:
     threads: 1
     output_queue: q_in
     config:
-      url: nats://127.0.0.1:4222
       subject: flow.jobs
       stream_name: FLOW
       durable_name: FLOW_PIPE

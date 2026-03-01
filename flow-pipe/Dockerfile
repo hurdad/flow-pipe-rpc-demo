@@ -11,7 +11,7 @@ COPY flow-pipe /src/flow-pipe
 RUN cmake -S /src -B /src/build \
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_FLOW_PIPE=ON \
-    -DBUILD_GRPC_BUILD=OFF \
+    -DBUILD_GRPC=OFF \
     && cmake --build /src/build -j \
     && cmake --install build
 

@@ -15,7 +15,7 @@ COPY third_party /src/third_party
 RUN cmake -S /src -B /src/build \
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_FLOW_PIPE=OFF \
-    -DBUILD_GRPC_BUILD=ON && \
+    -DBUILD_GRPC=ON && \
     cmake --build /src/build -j --target grpc-client grpc-gateway
 
 FROM ubuntu:24.04 AS client-runtime

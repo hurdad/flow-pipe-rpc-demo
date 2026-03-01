@@ -27,7 +27,7 @@ class RPCTransform final
       public ConfigurableStage {
 public:
   std::string name() const override {
-    return "rpc";
+    return "rpc_transform_stage";
   }
 
   RPCTransform() {

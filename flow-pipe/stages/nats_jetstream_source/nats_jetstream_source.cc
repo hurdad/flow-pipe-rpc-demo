@@ -1,6 +1,7 @@
 #include <google/protobuf/struct.pb.h>
 #include <nats/nats.h>
 
+#include <cstdlib>
 #include <cstring>
 #include <string>
 
@@ -76,7 +77,10 @@ class NatsJetStreamSource final : public ISourceStage, public ConfigurableStage 
       return false;
     }
 
-    std::string url = cfg.url().empty() ? kDefaultNatsUrl : cfg.url();
+    const char* env_url = std::getenv("NATS_URL");
+    std::string url = cfg.url().empty()
+                          ? (env_url ? env_url : kDefaultNatsUrl)
+                          : cfg.url();
     int poll_timeout_ms =
         cfg.poll_timeout_ms() > 0 ? static_cast<int>(cfg.poll_timeout_ms()) : kDefaultPollTimeoutMs;
 

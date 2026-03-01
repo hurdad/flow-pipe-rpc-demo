@@ -27,12 +27,11 @@ add_custom_command(
 
 add_executable(grpc-client
         src/main.cpp
-        src/otel.cpp
-        src/otel.h
+        ../common/otel.cpp
         ${PROTO_SRCS}
         ${GRPC_SRCS})
 
-target_include_directories(grpc-client PRIVATE ${CMAKE_CURRENT_BINARY_DIR} src)
+target_include_directories(grpc-client PRIVATE ${CMAKE_CURRENT_BINARY_DIR} src ../common)
 
 target_link_libraries(grpc-client PRIVATE
         gRPC::grpc++
