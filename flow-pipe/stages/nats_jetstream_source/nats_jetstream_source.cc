@@ -23,6 +23,23 @@ const char* kDefaultNatsUrl = "nats://127.0.0.1:4222";
 std::string StatusToString(natsStatus status) {
   return std::string(natsStatus_GetText(status));
 }
+
+std::string BuildNatsError(natsStatus status, jsErrCode js_error_code = static_cast<jsErrCode>(0)) {
+  std::string error = StatusToString(status);
+
+  char stack[512] = {};
+  if (nats_GetLastErrorStack(stack, sizeof(stack)) == NATS_OK && stack[0] != '\0') {
+    error += " | ";
+    error += stack;
+  }
+
+  if (js_error_code != 0) {
+    error += " | js_err_code=";
+    error += std::to_string(js_error_code);
+  }
+
+  return error;
+}
 }  // namespace
 
 // ============================================================
@@ -88,14 +105,28 @@ class NatsJetStreamSource final : public ISourceStage, public ConfigurableStage 
       return false;
     }
 
-    natsMsg* msg = nullptr;
-    natsStatus status = natsSubscription_NextMsg(&msg, subscription_, poll_timeout_ms_);
-    if (status == NATS_TIMEOUT) {
+    natsMsgList msg_list{};
+    jsErrCode fetch_error_code = static_cast<jsErrCode>(0);
+    natsStatus status = natsSubscription_Fetch(&msg_list, subscription_, 1, poll_timeout_ms_,
+                                               &fetch_error_code);
+    if (status == NATS_TIMEOUT || msg_list.Count == 0) {
+      natsMsgList_Destroy(&msg_list);
       return false;
     }
 
-    if (status != NATS_OK || !msg) {
-      FP_LOG_ERROR("nats_jetstream_source receive failed: " + StatusToString(status));
+    if (status != NATS_OK) {
+      natsMsgList_Destroy(&msg_list);
+      FP_LOG_ERROR("nats_jetstream_source fetch failed: " +
+                   BuildNatsError(status, fetch_error_code));
+      return false;
+    }
+
+    natsMsg* msg = msg_list.Msgs[0];
+    msg_list.Msgs[0] = nullptr;
+    natsMsgList_Destroy(&msg_list);
+
+    if (!msg) {
+      FP_LOG_ERROR("nats_jetstream_source fetch returned null message");
       return false;
     }
 
@@ -122,7 +153,7 @@ class NatsJetStreamSource final : public ISourceStage, public ConfigurableStage 
 
     status = natsMsg_Ack(msg, nullptr);
     if (status != NATS_OK) {
-      FP_LOG_ERROR("nats_jetstream_source ack failed: " + StatusToString(status));
+      FP_LOG_ERROR("nats_jetstream_source ack failed: " + BuildNatsError(status));
     }
 
     natsMsg_Destroy(msg);
@@ -164,10 +195,13 @@ class NatsJetStreamSource final : public ISourceStage, public ConfigurableStage 
     }
 
     natsSubscription* subscription = nullptr;
-    status =
-        js_SubscribeSync(&subscription, jetstream, subject.c_str(), nullptr, options_ptr, nullptr);
+    jsErrCode subscribe_error_code = static_cast<jsErrCode>(0);
+    const char* durable = durable_name.empty() ? nullptr : durable_name.c_str();
+    status = js_PullSubscribe(&subscription, jetstream, subject.c_str(), durable, nullptr,
+                              options_ptr, &subscribe_error_code);
     if (status != NATS_OK) {
-      FP_LOG_ERROR("nats_jetstream_source subscribe failed: " + StatusToString(status));
+      FP_LOG_ERROR("nats_jetstream_source subscribe failed: " +
+                   BuildNatsError(status, subscribe_error_code));
       jsCtx_Destroy(jetstream);
       natsConnection_Destroy(connection);
       return false;
