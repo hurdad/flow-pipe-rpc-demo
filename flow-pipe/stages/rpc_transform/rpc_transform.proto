@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+package flowpipe.stages.rpc.v1;
+
+// Configuration for RPC Transform stage
+message RPCTransformConfig {
+  int32 processing_delay_ms = 1;
+}
