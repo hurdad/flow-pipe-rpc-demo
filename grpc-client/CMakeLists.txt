@@ -37,10 +37,5 @@ target_include_directories(grpc-client PRIVATE ${CMAKE_CURRENT_BINARY_DIR} src)
 target_link_libraries(grpc-client PRIVATE
         gRPC::grpc++
         protobuf::libprotobuf
-        opentelemetry_metrics
         opentelemetry_trace
-        opentelemetry_logs
-        opentelemetry_resources
-        opentelemetry_exporter_otlp_grpc
-        opentelemetry_exporter_otlp_grpc_metrics
-        opentelemetry_exporter_otlp_grpc_log)
+        opentelemetry_exporter_otlp_grpc)

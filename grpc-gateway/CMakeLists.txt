@@ -40,10 +40,5 @@ target_link_libraries(grpc-gateway PRIVATE
         gRPC::grpc++
         protobuf::libprotobuf
         PkgConfig::NATS
-        opentelemetry_metrics
         opentelemetry_trace
-        opentelemetry_logs
-        opentelemetry_resources
-        opentelemetry_exporter_otlp_grpc
-        opentelemetry_exporter_otlp_grpc_metrics
-        opentelemetry_exporter_otlp_grpc_log)
+        opentelemetry_exporter_otlp_grpc)
