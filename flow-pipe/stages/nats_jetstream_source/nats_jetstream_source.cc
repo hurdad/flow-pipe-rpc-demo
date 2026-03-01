@@ -88,28 +88,34 @@ class NatsJetStreamSource final : public ISourceStage, public ConfigurableStage 
       return false;
     }
 
-    natsMsg* msg = nullptr;
-    natsStatus status = natsSubscription_NextMsg(&msg, subscription_, poll_timeout_ms_);
-    if (status == NATS_TIMEOUT) {
+    natsMsgList msg_list{};
+
+    jsErrCode err_code = 0;
+    natsStatus status = natsSubscription_Fetch(&msg_list, subscription_, 1, poll_timeout_ms_, &err_code);
+    if (status == NATS_TIMEOUT || msg_list.Count == 0) {
+      natsMsgList_Destroy(&msg_list);
       return false;
     }
 
-    if (status != NATS_OK || !msg) {
+    if (status != NATS_OK || msg_list.Count == 0 || msg_list.Msgs == nullptr) {
+      natsMsgList_Destroy(&msg_list);
       FP_LOG_ERROR("nats_jetstream_source receive failed: " + StatusToString(status));
       return false;
     }
 
+    natsMsg* msg = msg_list.Msgs[0];
+
     const char* data = natsMsg_GetData(msg);
     int data_len = natsMsg_GetDataLength(msg);
     if (data_len < 0) {
-      natsMsg_Destroy(msg);
+      natsMsgList_Destroy(&msg_list);
       FP_LOG_ERROR("nats_jetstream_source invalid message length");
       return false;
     }
 
     auto buffer = AllocatePayloadBuffer(static_cast<size_t>(data_len));
     if (!buffer) {
-      natsMsg_Destroy(msg);
+      natsMsgList_Destroy(&msg_list);
       FP_LOG_ERROR("nats_jetstream_source failed to allocate payload");
       return false;
     }
@@ -125,7 +131,7 @@ class NatsJetStreamSource final : public ISourceStage, public ConfigurableStage 
       FP_LOG_ERROR("nats_jetstream_source ack failed: " + StatusToString(status));
     }
 
-    natsMsg_Destroy(msg);
+    natsMsgList_Destroy(&msg_list);
     return true;
   }
 
@@ -164,8 +170,9 @@ class NatsJetStreamSource final : public ISourceStage, public ConfigurableStage 
     }
 
     natsSubscription* subscription = nullptr;
-    status =
-        js_SubscribeSync(&subscription, jetstream, subject.c_str(), nullptr, options_ptr, nullptr);
+    const char* durable = durable_name.empty() ? nullptr : durable_name.c_str();
+    status = js_PullSubscribe(&subscription, jetstream, subject.c_str(), durable, nullptr, options_ptr,
+                              nullptr);
     if (status != NATS_OK) {
       FP_LOG_ERROR("nats_jetstream_source subscribe failed: " + StatusToString(status));
       jsCtx_Destroy(jetstream);
