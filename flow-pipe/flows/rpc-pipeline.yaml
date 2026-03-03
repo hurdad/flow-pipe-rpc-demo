@@ -5,14 +5,12 @@ queues:
     capacity: 256
 
 stages:
-  - type: nats_jetstream_source
+  - type: nats_request_source
     name: source
     threads: 1
     output_queue: q_in
     config:
       subject: flow.jobs
-      stream_name: FLOW
-      durable_name: FLOW_PIPE
       poll_timeout_ms: 1000
 
   - type: rpc_transform
@@ -23,7 +21,7 @@ stages:
     config:
       processing_delay_ms: 1000
 
-  - type: nats_jetstream_sink
+  - type: nats_reply_sink
     name: sink
     threads: 1
     input_queue: q_out
