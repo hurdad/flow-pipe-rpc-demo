@@ -29,8 +29,8 @@ COPY --from=builder \
 COPY flow-pipe/flows/*.yaml /opt/flow-pipe/flows/
 
 # confirm stages + flow installed
-RUN test -f /opt/flow-pipe/plugins/libstage_nats_jetstream_source.so
-RUN test -f /opt/flow-pipe/plugins/libstage_nats_jetstream_sink.so
+RUN test -f /opt/flow-pipe/plugins/libstage_nats_request_source.so
+RUN test -f /opt/flow-pipe/plugins/libstage_nats_reply_sink.so
 RUN test -f /opt/flow-pipe/plugins/libstage_rpc_transform.so
 
 RUN test -f /opt/flow-pipe/flows/rpc-pipeline.yaml

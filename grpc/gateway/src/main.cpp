@@ -43,22 +43,16 @@ public:
       return;
     }
 
-    s = natsConnection_JetStream(&js_, nc_, nullptr);
-    if (s != NATS_OK) {
-      std::cerr << "GatewayService: natsConnection_JetStream failed: "
-                << natsStatus_GetText(s) << "\n";
-    }
   }
 
   ~GatewayService() override {
-    if (js_) jsCtx_Destroy(js_);
     if (nc_) natsConnection_Destroy(nc_);
     if (opts_) natsOptions_Destroy(opts_);
   }
 
   grpc::Status Run(grpc::ServerContext *context, const RPCRequest *request,
                    RPCResponse *response) override {
-    if (!nc_ || !js_) {
+    if (!nc_) {
       return grpc::Status(grpc::StatusCode::UNAVAILABLE,
                           "NATS connection not initialized");
     }
@@ -78,7 +72,7 @@ public:
       return grpc::Status(grpc::StatusCode::INTERNAL, "subscribe failed");
     }
 
-    auto pub_span = tracer->StartSpan("jetstream.publish");
+    auto pub_span = tracer->StartSpan("nats.publish");
 
     natsMsg *msg = nullptr;
     natsMsg_Create(&msg, "flow.jobs", nullptr,
@@ -105,23 +99,18 @@ public:
     propagator->Inject(carrier,
                        opentelemetry::context::RuntimeContext::GetCurrent());
 
-    jsPubAck *ack = nullptr;
-    s = js_PublishMsg(&ack, js_, msg, nullptr, nullptr);
+    s = natsConnection_PublishMsg(nc_, msg);
     pub_span->End();
 
     natsMsg_Destroy(msg);
 
-    if (s != NATS_OK || ack == nullptr) {
+    if (s != NATS_OK) {
       natsSubscription_Destroy(sub);
       span->SetStatus(opentelemetry::trace::StatusCode::kError,
                       "publish failed");
       span->End();
       return grpc::Status(grpc::StatusCode::INTERNAL, "publish failed");
     }
-
-    span->SetAttribute("js.stream", ack->Stream);
-    span->SetAttribute("js.seq", static_cast<int64_t>(ack->Sequence));
-    jsPubAck_Destroy(ack);
 
     natsMsg *reply = nullptr;
     s = natsSubscription_NextMsg(&reply, sub, 5000);
@@ -157,7 +146,6 @@ public:
 private:
   natsOptions *opts_{};
   natsConnection *nc_{};
-  jsCtx *js_{};
 };
 
 int main() {

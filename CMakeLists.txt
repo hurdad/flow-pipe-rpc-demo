@@ -12,6 +12,9 @@ set(WITH_OTLP_HTTP OFF CACHE BOOL "Build OTLP HTTP exporter" FORCE)
 set(WITH_BENCHMARK OFF CACHE BOOL "Disable Benchmarks build" FORCE)
 set(WITH_EXAMPLES OFF CACHE BOOL "Disable Examples build" FORCE)
 set(WITH_FUNC_TESTS OFF CACHE BOOL "Disable Func tests" FORCE)
+set(NATSCPP_BUILD_EXAMPLES OFF CACHE BOOL "Disable natscpp examples" FORCE)
+
+add_subdirectory(third_party/nats-cpp)
 
 if(BUILD_FLOW_PIPE)
   add_subdirectory(flow-pipe)
