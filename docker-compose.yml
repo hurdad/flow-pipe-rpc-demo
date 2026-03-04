@@ -64,6 +64,8 @@ services:
     depends_on:
       grpc-gateway:
         condition: service_healthy
+      flow-pipe:
+        condition: service_started
       jaeger:
         condition: service_started
     environment:

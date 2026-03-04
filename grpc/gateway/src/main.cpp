@@ -135,7 +135,7 @@ public:
 
     natscpp::message reply;
     try {
-      reply = sub.next_message(std::chrono::milliseconds(5000));
+      reply = sub.next_message(std::chrono::milliseconds(10000));
     } catch (const natscpp::nats_error &e) {
       span->SetStatus(opentelemetry::trace::StatusCode::kError,
                       "timeout waiting reply");

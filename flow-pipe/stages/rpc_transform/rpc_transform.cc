@@ -90,8 +90,8 @@ public:
           std::toupper(static_cast<unsigned char>(src[i])));
     }
 
-    // build output
-    output = Payload(std::move(buffer), size);
+    // build output, preserving input meta (carries reply_to and trace context)
+    output = Payload(std::move(buffer), size, input.meta);
   }
 
 private:
