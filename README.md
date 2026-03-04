@@ -47,6 +47,14 @@ Expected response:
 - payload echoed back from flow-pipe pipeline
 - `processed_by: transform_stage`
 
+## End-to-end smoke test
+
+Run the end-to-end test script to build the stack, execute the gRPC client against the running system, assert the response, and tear everything down:
+
+```bash
+./tests/e2e.sh
+```
+
 ## Traces
 
 - Jaeger UI: <http://localhost:16686>
