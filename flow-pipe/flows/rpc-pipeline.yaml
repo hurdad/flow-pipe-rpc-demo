@@ -34,5 +34,3 @@ stages:
     name: sink
     threads: 1
     input_queue: q_out
-    config:
-      subject: flow.replies

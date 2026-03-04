@@ -67,11 +67,6 @@ class NatsReplySink final : public ISinkStage, public ConfigurableStage {
       return false;
     }
 
-    if (cfg.subject().empty()) {
-      FP_LOG_ERROR("nats_reply_sink requires subject");
-      return false;
-    }
-
     const char* env_url = std::getenv("NATS_URL");
     std::string url = cfg.url().empty() ? (env_url ? env_url : kDefaultNatsUrl) : cfg.url();
 
@@ -85,7 +80,6 @@ class NatsReplySink final : public ISinkStage, public ConfigurableStage {
     }
 
     config_ = std::move(cfg);
-    subject_ = config_.subject();
 
     FP_LOG_INFO("nats_reply_sink configured");
     return true;
@@ -96,20 +90,22 @@ class NatsReplySink final : public ISinkStage, public ConfigurableStage {
       return;
     }
 
-    // Prefer the per-request reply inbox carried in schema_id (set by
-    // nats_request_source from the NATS message reply-to field).  Fall
-    // back to the configured static subject for non-request messages.
-    const std::string& dest =
-        payload.meta.has_schema_id() ? payload.meta.schema_id : subject_;
+    const auto* reply_to_val = payload.meta.get_attr("reply_to");
+    const std::string* dest =
+        reply_to_val ? std::get_if<std::string>(reply_to_val) : nullptr;
+    if (!dest || dest->empty()) {
+      FP_LOG_ERROR("nats_reply_sink: no reply_to in payload metadata");
+      return;
+    }
 
     try {
       std::string_view data(reinterpret_cast<const char*>(payload.data()), payload.size);
       if (payload.meta.has_trace()) {
-        auto msg = natscpp::message::create(dest, "", data);
+        auto msg = natscpp::message::create(*dest, "", data);
         msg.set_header("traceparent", encode_traceparent(payload.meta));
         connection_->publish(std::move(msg));
       } else {
-        connection_->publish(dest, data);
+        connection_->publish(*dest, data);
       }
     } catch (const natscpp::nats_error& e) {
       FP_LOG_ERROR("nats_reply_sink publish failed: " + std::string(e.what()));
@@ -119,7 +115,6 @@ class NatsReplySink final : public ISinkStage, public ConfigurableStage {
  private:
   NatsReplySinkConfig config_{};
   std::unique_ptr<natscpp::connection> connection_{};
-  std::string subject_{};
 };
 
 extern "C" {

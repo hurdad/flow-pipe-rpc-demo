@@ -147,7 +147,7 @@ class NatsRequestSource final : public ISourceStage, public ConfigurableStage {
     // response back to the correct per-request subscriber.
     std::string_view reply_to = message.reply_to();
     if (!reply_to.empty()) {
-      meta.schema_id = std::string(reply_to);
+      meta.set_attr("reply_to", std::string(reply_to));
     }
     payload = Payload(std::move(buffer), data.size(), std::move(meta));
     return true;
