@@ -2,8 +2,7 @@ FROM ubuntu:24.04 AS build
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential cmake pkg-config ca-certificates git \
-    libgrpc++-dev libprotobuf-dev protobuf-compiler protobuf-compiler-grpc \
-    libnats-dev && \
+    libgrpc++-dev libprotobuf-dev protobuf-compiler protobuf-compiler-grpc && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /src
@@ -34,7 +33,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgrpc++1.51t64 \
     libprotobuf32 \
-    libnats3.7t64 && \
+    netcat-openbsd && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

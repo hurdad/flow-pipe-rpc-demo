@@ -35,5 +35,4 @@ stages:
     threads: 1
     input_queue: q_out
     config:
-      url: nats://127.0.0.1:4222
       subject: flow.replies

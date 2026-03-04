@@ -49,6 +49,12 @@ services:
       - NATS_URL=nats://127.0.0.1:4222
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4317
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "50051"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+      start_period: 5s
 
   grpc-client:
     build:
@@ -57,8 +63,10 @@ services:
       target: client-runtime
     network_mode: host
     depends_on:
-      - grpc-gateway
-      - jaeger
+      grpc-gateway:
+        condition: service_healthy
+      jaeger:
+        condition: service_started
     environment:
       - GRPC_SERVER=127.0.0.1:50051
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4317

@@ -9,5 +9,6 @@ namespace otel {
 
 void InitTracer(const std::string &service_name);
 opentelemetry::nostd::shared_ptr<opentelemetry::trace::Tracer> GetTracer();
+void ShutdownTracer();
 
 } // namespace otel

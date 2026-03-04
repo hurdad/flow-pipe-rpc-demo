@@ -96,14 +96,20 @@ class NatsReplySink final : public ISinkStage, public ConfigurableStage {
       return;
     }
 
+    // Prefer the per-request reply inbox carried in schema_id (set by
+    // nats_request_source from the NATS message reply-to field).  Fall
+    // back to the configured static subject for non-request messages.
+    const std::string& dest =
+        payload.meta.has_schema_id() ? payload.meta.schema_id : subject_;
+
     try {
       std::string_view data(reinterpret_cast<const char*>(payload.data()), payload.size);
       if (payload.meta.has_trace()) {
-        auto msg = natscpp::message::create(subject_, "", data);
+        auto msg = natscpp::message::create(dest, "", data);
         msg.set_header("traceparent", encode_traceparent(payload.meta));
         connection_->publish(std::move(msg));
       } else {
-        connection_->publish(subject_, data);
+        connection_->publish(dest, data);
       }
     } catch (const natscpp::nats_error& e) {
       FP_LOG_ERROR("nats_reply_sink publish failed: " + std::string(e.what()));

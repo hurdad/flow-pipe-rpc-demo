@@ -142,7 +142,14 @@ class NatsRequestSource final : public ISourceStage, public ConfigurableStage {
       std::memcpy(buffer.get(), data.data(), data.size());
     }
 
-    payload = Payload(std::move(buffer), data.size(), parse_traceparent(message));
+    flowpipe::PayloadMeta meta = parse_traceparent(message);
+    // Carry the NATS reply-to inbox so nats_reply_sink can route the
+    // response back to the correct per-request subscriber.
+    std::string_view reply_to = message.reply_to();
+    if (!reply_to.empty()) {
+      meta.schema_id = std::string(reply_to);
+    }
+    payload = Payload(std::move(buffer), data.size(), std::move(meta));
     return true;
   }
 

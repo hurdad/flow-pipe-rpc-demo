@@ -50,11 +50,13 @@ int main() {
     span->SetStatus(opentelemetry::trace::StatusCode::kError, status.error_message());
     std::cerr << "Run failed: " << status.error_message() << std::endl;
     span->End();
+    otel::ShutdownTracer();
     return 1;
   }
 
   std::cout << "status=" << resp.status() << " payload='" << resp.payload()
             << "' processed_by=" << resp.processed_by() << std::endl;
   span->End();
+  otel::ShutdownTracer();
   return 0;
 }
