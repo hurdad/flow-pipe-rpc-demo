@@ -96,7 +96,7 @@ class NatsRequestSource final : public ISourceStage, public ConfigurableStage {
       return false;
     }
 
-    std::string_view data = message.data_view();
+    std::string_view data = message.data();
     auto buffer = AllocatePayloadBuffer(data.size());
     if (!buffer) {
       FP_LOG_ERROR("nats_request_source failed to allocate payload");

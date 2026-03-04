@@ -6,8 +6,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Protobuf REQUIRED)
 find_package(gRPC REQUIRED)
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(NATS REQUIRED IMPORTED_TARGET libnats)
 
 set(PROTO_FILE ${CMAKE_CURRENT_SOURCE_DIR}/../../proto/service.proto)
 get_filename_component(PROTO_PATH ${PROTO_FILE} PATH)
@@ -38,6 +36,6 @@ target_include_directories(grpc-gateway PRIVATE ${CMAKE_CURRENT_BINARY_DIR} src 
 target_link_libraries(grpc-gateway PRIVATE
         gRPC::grpc++
         protobuf::libprotobuf
-        PkgConfig::NATS
+        natscpp::natscpp
         opentelemetry_trace
         opentelemetry_exporter_otlp_grpc)
