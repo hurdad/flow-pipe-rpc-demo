@@ -1,4 +1,5 @@
 observability:
+  debug: true
   tracing_enabled: true
   transport: OTLP_TRANSPORT_GRPC
   tracing:
