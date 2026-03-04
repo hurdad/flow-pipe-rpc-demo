@@ -6,6 +6,7 @@
 #include <natscpp/connection.hpp>
 #include <natscpp/error.hpp>
 #include <opentelemetry/context/propagation/global_propagator.h>
+#include <opentelemetry/trace/context.h>
 #include <opentelemetry/trace/provider.h>
 
 #include <chrono>
@@ -39,7 +40,33 @@ public:
     }
 
     auto tracer = otel::GetTracer();
-    auto span = tracer->StartSpan("grpc.gateway.Run");
+    auto propagator =
+        opentelemetry::context::propagation::GlobalTextMapPropagator::
+            GetGlobalPropagator();
+
+    // Extract incoming trace context from gRPC client metadata so the
+    // gateway span is a child of the client span.
+    class GrpcServerCarrier : public opentelemetry::context::propagation::TextMapCarrier {
+    public:
+      explicit GrpcServerCarrier(grpc::ServerContext *ctx) : ctx_(ctx) {}
+      opentelemetry::nostd::string_view Get(
+          opentelemetry::nostd::string_view key) const noexcept override {
+        auto it = ctx_->client_metadata().find(
+            grpc::string_ref(key.data(), key.size()));
+        if (it != ctx_->client_metadata().end())
+          return {it->second.data(), it->second.size()};
+        return "";
+      }
+      void Set(opentelemetry::nostd::string_view,
+               opentelemetry::nostd::string_view) noexcept override {}
+    private:
+      grpc::ServerContext *ctx_;
+    } server_carrier(context);
+    auto parent_ctx = propagator->Extract(
+        server_carrier, opentelemetry::context::RuntimeContext::GetCurrent());
+    opentelemetry::trace::StartSpanOptions span_opts;
+    span_opts.parent = parent_ctx;
+    auto span = tracer->StartSpan("grpc.gateway.Run", span_opts);
     auto scope = tracer->WithActiveSpan(span);
 
     // Generate a unique per-request reply inbox so concurrent requests
@@ -75,9 +102,6 @@ public:
         "flow.jobs", inbox,
         std::string_view{request->payload().data(), request->payload().size()});
 
-    auto propagator =
-        opentelemetry::context::propagation::GlobalTextMapPropagator::
-            GetGlobalPropagator();
     class NatsCarrier : public opentelemetry::context::propagation::TextMapCarrier {
     public:
       explicit NatsCarrier(natscpp::message &msg) : msg_(msg) {}
@@ -120,13 +144,29 @@ public:
                           "timeout waiting flow-pipe reply");
     }
 
-    // Extract the traceparent propagated back by nats_reply_sink so the
-    // full flow-pipe trace is linked and visible in the gateway span.
+    // Link the flow-pipe span propagated back by nats_reply_sink so
+    // backends can correlate the pipeline trace with this gateway span.
     std::string reply_traceparent = reply.header("traceparent");
     if (!reply_traceparent.empty()) {
-      span->AddEvent("nats.reply.received",
-                     {{"traceparent",
-                       opentelemetry::nostd::string_view{reply_traceparent}}});
+      class ReplyCarrier : public opentelemetry::context::propagation::TextMapCarrier {
+      public:
+        explicit ReplyCarrier(const std::string &tp) : tp_(tp) {}
+        opentelemetry::nostd::string_view Get(
+            opentelemetry::nostd::string_view key) const noexcept override {
+          if (key == "traceparent") return {tp_.data(), tp_.size()};
+          return "";
+        }
+        void Set(opentelemetry::nostd::string_view,
+                 opentelemetry::nostd::string_view) noexcept override {}
+      private:
+        const std::string &tp_;
+      } reply_carrier(reply_traceparent);
+      auto reply_ctx = propagator->Extract(
+          reply_carrier, opentelemetry::context::Context{});
+      auto reply_span_ctx = opentelemetry::trace::GetSpan(reply_ctx)->GetContext();
+      if (reply_span_ctx.IsValid()) {
+        span->AddLink(reply_span_ctx);
+      }
     }
 
     std::string_view data = reply.data();

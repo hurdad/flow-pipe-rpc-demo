@@ -2,10 +2,12 @@
 
 #include <cstdlib>
 
+#include <opentelemetry/context/propagation/global_propagator.h>
 #include <opentelemetry/exporters/otlp/otlp_grpc_exporter_factory.h>
 #include <opentelemetry/sdk/resource/resource.h>
 #include <opentelemetry/sdk/trace/batch_span_processor.h>
 #include <opentelemetry/sdk/trace/tracer_provider.h>
+#include <opentelemetry/trace/propagation/http_trace_context.h>
 
 namespace otel {
 namespace trace_sdk = opentelemetry::sdk::trace;
@@ -32,6 +34,10 @@ void InitTracer(const std::string &service_name) {
   trace::Provider::SetTracerProvider(
       opentelemetry::nostd::shared_ptr<trace::TracerProvider>(
           std::static_pointer_cast<trace::TracerProvider>(g_sdk_provider)));
+
+  opentelemetry::context::propagation::GlobalTextMapPropagator::SetGlobalPropagator(
+      opentelemetry::nostd::shared_ptr<opentelemetry::context::propagation::TextMapPropagator>(
+          new opentelemetry::trace::propagation::HttpTraceContext()));
 }
 
 opentelemetry::nostd::shared_ptr<trace::Tracer> GetTracer() {
