@@ -1,3 +1,12 @@
+observability:
+  tracing_enabled: true
+  transport: OTLP_TRANSPORT_GRPC
+  tracing:
+    trace_hint: TRACE_HINT_ALWAYS
+    processor: TRACE_PROCESSOR_BATCH
+    stage_spans_enabled: true
+    record_spans_enabled: true
+
 queues:
   - name: q_in
     capacity: 256

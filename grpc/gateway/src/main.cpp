@@ -124,6 +124,16 @@ public:
                           "timeout waiting flow-pipe reply");
     }
 
+    // Extract the traceparent propagated back by nats_reply_sink so the
+    // full flow-pipe trace is linked and visible in the gateway span.
+    const char *reply_traceparent = nullptr;
+    if (natsMsgHeader_Get(reply, "traceparent", &reply_traceparent) == NATS_OK &&
+        reply_traceparent != nullptr) {
+      span->AddEvent("nats.reply.received",
+                     {{"traceparent",
+                       opentelemetry::nostd::string_view{reply_traceparent}}});
+    }
+
     int data_len = natsMsg_GetDataLength(reply);
     if (data_len < 0) {
       natsMsg_Destroy(reply);

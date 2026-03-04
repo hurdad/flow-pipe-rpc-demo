@@ -29,6 +29,10 @@ services:
       - NATS_URL=nats://127.0.0.1:4222
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4317
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - FLOWPIPE_OBSERVABILITY_ENABLED=true
+      - FLOWPIPE_TRACING_ENABLED=true
+      - FLOWPIPE_OTEL_ENDPOINT=http://127.0.0.1:4317
+      - OTEL_SERVICE_NAME=flow-pipe
 
   grpc-gateway:
     build:

@@ -20,6 +20,28 @@ using NatsReplySinkConfig =
 
 namespace {
 const char* kDefaultNatsUrl = "nats://127.0.0.1:4222";
+
+static constexpr char kHexChars[] = "0123456789abcdef";
+
+// Encode PayloadMeta trace context as a W3C traceparent header value.
+static std::string encode_traceparent(const flowpipe::PayloadMeta& meta) {
+  std::string out;
+  out.reserve(55);
+  out += "00-";
+  for (int i = 0; i < flowpipe::PayloadMeta::trace_id_size; ++i) {
+    out += kHexChars[(meta.trace_id[i] >> 4) & 0xF];
+    out += kHexChars[meta.trace_id[i] & 0xF];
+  }
+  out += '-';
+  for (int i = 0; i < flowpipe::PayloadMeta::span_id_size; ++i) {
+    out += kHexChars[(meta.span_id[i] >> 4) & 0xF];
+    out += kHexChars[meta.span_id[i] & 0xF];
+  }
+  out += '-';
+  out += kHexChars[(meta.flags >> 4) & 0xF];
+  out += kHexChars[meta.flags & 0xF];
+  return out;
+}
 }  // namespace
 
 class NatsReplySink final : public ISinkStage, public ConfigurableStage {
@@ -75,8 +97,14 @@ class NatsReplySink final : public ISinkStage, public ConfigurableStage {
     }
 
     try {
-      connection_->publish(subject_,
-                           std::string_view(reinterpret_cast<const char*>(payload.data()), payload.size));
+      std::string_view data(reinterpret_cast<const char*>(payload.data()), payload.size);
+      if (payload.meta.has_trace()) {
+        auto msg = natscpp::message::create(subject_, "", data);
+        msg.set_header("traceparent", encode_traceparent(payload.meta));
+        connection_->publish(std::move(msg));
+      } else {
+        connection_->publish(subject_, data);
+      }
     } catch (const natscpp::nats_error& e) {
       FP_LOG_ERROR("nats_reply_sink publish failed: " + std::string(e.what()));
     }

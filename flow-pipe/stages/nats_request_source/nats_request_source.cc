@@ -23,6 +23,35 @@ using NatsRequestSourceConfig =
 namespace {
 constexpr int kDefaultPollTimeoutMs = 1000;
 const char* kDefaultNatsUrl = "nats://127.0.0.1:4222";
+
+static bool hex_nibble(char c, uint8_t& out) noexcept {
+  if (c >= '0' && c <= '9') { out = static_cast<uint8_t>(c - '0'); return true; }
+  if (c >= 'a' && c <= 'f') { out = static_cast<uint8_t>(c - 'a' + 10); return true; }
+  if (c >= 'A' && c <= 'F') { out = static_cast<uint8_t>(c - 'A' + 10); return true; }
+  return false;
+}
+
+static bool hex_decode(const char* src, uint8_t* dst, size_t n) noexcept {
+  for (size_t i = 0; i < n; ++i) {
+    uint8_t hi{}, lo{};
+    if (!hex_nibble(src[i * 2], hi) || !hex_nibble(src[i * 2 + 1], lo)) return false;
+    dst[i] = static_cast<uint8_t>((hi << 4) | lo);
+  }
+  return true;
+}
+
+// Parse W3C traceparent header: "00-<32hex trace-id>-<16hex parent-id>-<2hex flags>"
+static flowpipe::PayloadMeta parse_traceparent(const natscpp::message& msg) noexcept {
+  flowpipe::PayloadMeta meta;
+  std::string tp = msg.header("traceparent");
+  // Minimum valid length: 2 + 1 + 32 + 1 + 16 + 1 + 2 = 55
+  if (tp.size() < 55 || tp[2] != '-' || tp[35] != '-' || tp[52] != '-') return meta;
+  if (!hex_decode(tp.data() + 3, meta.trace_id, 16)) return meta;
+  if (!hex_decode(tp.data() + 36, meta.span_id, 8)) return meta;
+  uint8_t flags_byte = 0;
+  if (hex_decode(tp.data() + 53, &flags_byte, 1)) meta.flags = flags_byte;
+  return meta;
+}
 }  // namespace
 
 class NatsRequestSource final : public ISourceStage, public ConfigurableStage {
@@ -86,14 +115,20 @@ class NatsRequestSource final : public ISourceStage, public ConfigurableStage {
     }
 
     natscpp::message message;
-    try {
-      message = subscription_->next_message(std::chrono::milliseconds(poll_timeout_ms_));
-    } catch (const natscpp::nats_error& e) {
-      if (e.status() == NATS_TIMEOUT) {
+    while (true) {
+      if (ctx.stop.stop_requested()) {
         return false;
       }
-      FP_LOG_ERROR("nats_request_source receive failed: " + std::string(e.what()));
-      return false;
+      try {
+        message = subscription_->next_message(std::chrono::milliseconds(poll_timeout_ms_));
+        break;
+      } catch (const natscpp::nats_error& e) {
+        if (e.status() == NATS_TIMEOUT) {
+          continue;
+        }
+        FP_LOG_ERROR("nats_request_source receive failed: " + std::string(e.what()));
+        return false;
+      }
     }
 
     std::string_view data = message.data();
@@ -107,7 +142,7 @@ class NatsRequestSource final : public ISourceStage, public ConfigurableStage {
       std::memcpy(buffer.get(), data.data(), data.size());
     }
 
-    payload = Payload(std::move(buffer), data.size());
+    payload = Payload(std::move(buffer), data.size(), parse_traceparent(message));
     return true;
   }
 
