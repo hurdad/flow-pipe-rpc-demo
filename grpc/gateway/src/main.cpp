@@ -62,8 +62,8 @@ public:
     private:
       grpc::ServerContext *ctx_;
     } server_carrier(context);
-    auto parent_ctx = propagator->Extract(
-        server_carrier, opentelemetry::context::RuntimeContext::GetCurrent());
+    auto current_ctx = opentelemetry::context::RuntimeContext::GetCurrent();
+    auto parent_ctx = propagator->Extract(server_carrier, current_ctx);
     opentelemetry::trace::StartSpanOptions span_opts;
     span_opts.parent = parent_ctx;
     auto span = tracer->StartSpan("grpc.gateway.Run", span_opts);
@@ -161,11 +161,11 @@ public:
       private:
         const std::string &tp_;
       } reply_carrier(reply_traceparent);
-      auto reply_ctx = propagator->Extract(
-          reply_carrier, opentelemetry::context::Context{});
+      opentelemetry::context::Context empty_ctx;
+      auto reply_ctx = propagator->Extract(reply_carrier, empty_ctx);
       auto reply_span_ctx = opentelemetry::trace::GetSpan(reply_ctx)->GetContext();
       if (reply_span_ctx.IsValid()) {
-        span->AddLink(reply_span_ctx);
+        span->SetAttribute("nats.reply.traceparent", reply_traceparent);
       }
     }
 
