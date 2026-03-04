@@ -30,8 +30,8 @@ void InitTracer(const std::string &service_name) {
   g_sdk_provider = std::make_shared<trace_sdk::TracerProvider>(
       std::move(processor), resource::Resource::Create(attrs));
   trace::Provider::SetTracerProvider(
-      opentelemetry::nostd::shared_ptr<trace::TracerProvider>(g_sdk_provider,
-                                                              g_sdk_provider.get()));
+      opentelemetry::nostd::shared_ptr<trace::TracerProvider>(
+          std::static_pointer_cast<trace::TracerProvider>(g_sdk_provider)));
 }
 
 opentelemetry::nostd::shared_ptr<trace::Tracer> GetTracer() {

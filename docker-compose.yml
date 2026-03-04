@@ -5,7 +5,6 @@ services:
     command:
       - "--http_port=8222"
       - "--port=4222"
-
     volumes:
       - nats_data:/data
 

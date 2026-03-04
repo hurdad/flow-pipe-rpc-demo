@@ -88,7 +88,8 @@ public:
       void Set(opentelemetry::nostd::string_view key,
                opentelemetry::nostd::string_view value) noexcept override {
         try {
-          msg_.set_header(key, value);
+          msg_.set_header(std::string_view{key.data(), key.size()},
+                          std::string_view{value.data(), value.size()});
         } catch (...) {}
       }
     private:
